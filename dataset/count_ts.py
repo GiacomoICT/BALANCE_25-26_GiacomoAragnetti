@@ -5,8 +5,7 @@ import os
 from collections import Counter
 import ast
 
-# --- CONFIGURATION ---
-INPUT_PATTERN = 'dataset/group*_combined_v2.csv'
+INPUT_PATTERN = 'dataset/group*_combined.csv'
 OUTPUT_DIR = 'dataset/results'
 TS_COLUMNS = ['hr_time_series', 'resp_time_series', 'stress_time_series']
 
@@ -14,8 +13,6 @@ def get_list_length(val):
     if pd.isna(val) or str(val).strip() in ["", "[]"]:
         return 0
     try:
-        # Use ast.literal_eval instead of json.loads
-        # This handles 'None' and Python-style strings correctly
         if isinstance(val, str):
             parsed = ast.literal_eval(val)
             return len(parsed)
@@ -24,7 +21,6 @@ def get_list_length(val):
         return -1
 
 def analyze_lengths():
-    # Create the output directory if it doesn't exist
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
         print(f"Created directory: {OUTPUT_DIR}")
@@ -38,8 +34,6 @@ def analyze_lengths():
     print(f"Analyzing {len(files)} files...")
 
     for filepath in files:
-        # Extract group number for the filename
-        # Handles paths like 'dataset/group0_combined.csv'
         base_name = os.path.basename(filepath)
         group_id = base_name.split('_')[0] 
         report_path = os.path.join(OUTPUT_DIR, f"{group_id}_ts_stats.txt")
@@ -47,7 +41,6 @@ def analyze_lengths():
         print(f"Processing {base_name}...")
         
         try:
-            # usecols speeds up reading by ignoring columns we don't need
             df = pd.read_csv(filepath, sep=';', on_bad_lines='skip', usecols=lambda x: x in TS_COLUMNS)
             
             with open(report_path, 'w') as f:

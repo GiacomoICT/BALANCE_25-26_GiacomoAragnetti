@@ -4,10 +4,9 @@ import glob
 import json
 import ast
 
-# --- CONFIGURATION ---
 FILE_PATTERN = 'dataset/group*_combined.csv'
 
-# Columns specifically mentioned in your snippet for Log Transformation
+# Columns we compute log of 
 COLS_TO_LOG = [
     'act_distance', 
     'sleep_sleepTimeSeconds', 
@@ -17,39 +16,33 @@ COLS_TO_LOG = [
 def clean_time_series_feature(series_str, target_length=720, min_quality_ratio=0.5):
     """
     Standardizes time series:
-    1. Parses Python-style strings (fixing the 'None' issue).
-    2. Replaces negatives/None with NaN.
-    3. Rejects series that are too short (<50% data) to avoid distortion.
-    4. Interpolates small gaps and resamples to the exact target grid.
+    1)Parses Python-style strings (handling the None values).
+    2)Replaces negatives/None with NaN.
+    3)Rejects series that are too short (<50% data) to avoid distortion.
+    4)Interpolates small gaps and resamples to the exact target grid.
+
+    More info on the report regarding the choices
     """
     try:
-        # 1. PARSE: Use ast.literal_eval to handle strings like "[None, 60, 62]"
         if pd.isna(series_str) or str(series_str).strip() in ["", "[]"]:
             return [0.0] * target_length
-        
-        # This fixes the Group 7 "-1 length" error
+    
         data = np.array(ast.literal_eval(str(series_str)))
 
-        # 2. INITIAL CLEANING: Convert to float and mask bad data
         data = data.astype(float)
-        data[data < 0] = np.nan # Fixes Problem #2 (negatives)
+        data[data < 0] = np.nan 
         
-        # 3. QUALITY THRESHOLD: Avoid the "407 problem"
-        # If we have less than 50% of the data, stretching it creates "fake" trends.
+        # If we have less than 50% of the data, we avoid stretching it to fit the desired length (we fill with average)
         valid_count = np.count_nonzero(~np.isnan(data))
         if valid_count < (target_length * min_quality_ratio):
-            # Return daily average if possible, otherwise zeros
             fill_val = np.nanmean(data) if valid_count > 0 else 0.0
             return [float(fill_val)] * target_length
 
-        # 4. INTERPOLATION: Fill internal gaps (Problem #3)
+        # INTERPOLATION
         s = pd.Series(data)
-        # We limit internal interpolation to 10 points (~20-30 mins) 
-        # to ensure we aren't "hallucinating" values across massive gaps.
         data_cleaned = s.interpolate(method='linear', limit=10).ffill().bfill().values
 
-        # 5. RESAMPLING: Stretch or shrink to target (Fixes 719 vs 720 and 480 vs 720)
-        # This maps whatever length we have (e.g. 480 or 719) onto the target grid.
+        # RESAMPLING
         current_indices = np.linspace(0, 1, len(data_cleaned))
         target_indices = np.linspace(0, 1, target_length)
         
@@ -58,12 +51,11 @@ def clean_time_series_feature(series_str, target_length=720, min_quality_ratio=0
         return resampled_data.tolist()
 
     except Exception:
-        # Fallback for completely malformed rows
         return [0.0] * target_length
 
 def apply_ts_cleaning(df):
     """
-    Applies cleaning to the specific TS columns in your dataset.
+    Calls previous function on the wanted columns
     """
     ts_cols = ['hr_time_series', 'resp_time_series', 'stress_time_series'] # Adjusted for your labels
     
@@ -82,7 +74,9 @@ def apply_ts_cleaning(df):
     return df
 
 def add_circadian_features_safe(df):
-    """Calculates the difference between average Day HR and Night HR."""
+    """
+    Calculates the difference between average Day HR and Night HR 
+    """
     def get_circadian_delta(ts):
         ts = np.array(ts)
         if np.all(ts == 0) or np.all(ts == ts[0]):
@@ -94,20 +88,19 @@ def add_circadian_features_safe(df):
 
     if 'hr_time_series' in df.columns:
         res = df['hr_time_series'].apply(get_circadian_delta)
-        df['ts_hr_circadian_delta'] = [r[0] for r in res]
-        # We can reuse the existing hr_ts_is_reliable flag if you have it
-        
+        df['ts_hr_circadian_delta'] = [r[0] for r in res]        
         df['ts_hr_circadian_delta'] = df['ts_hr_circadian_delta'].fillna(df['ts_hr_circadian_delta'].mean())
     return df
 
 def add_sleep_onset_features_safe(df):
-    """Measures respiratory stability during the first 2 hours of sleep."""
+    """
+    Measures respiratory stability during the first 2 hours of sleep
+    """
     def get_onset_stability(ts):
         ts = np.array(ts)
         if np.all(ts == 0) or np.all(ts == ts[0]):
             return None, 0
         
-        # Segment: first 120 minutes of sleep
         onset_window = ts[480:540]
         return np.std(np.diff(onset_window)), 1
 
@@ -119,13 +112,14 @@ def add_sleep_onset_features_safe(df):
     return df
 
 def add_stress_peak_features_safe(df):
-    """Counts the number of high-stress events (>75)."""
+    """
+    Counts the number of high-stress events (>75)
+    """
     def count_peaks(ts):
         ts = np.array(ts)
         if np.all(ts == 0):
             return None, 0
         
-        # Count samples where stress > 75
         peaks = np.sum(ts > 75)
         return peaks, 1
 
@@ -133,14 +127,13 @@ def add_stress_peak_features_safe(df):
         res = df['stress_time_series'].apply(count_peaks)
         df['ts_stress_peaks'] = [r[0] for r in res]
         
-        # For a count, filling with the median is often safer than the mean
         df['ts_stress_peaks'] = df['ts_stress_peaks'].fillna(df['ts_stress_peaks'].median())
     return df
 
 def add_resp_stability_features_safe(df):
     def get_stability(ts):
         ts = np.array(ts)
-        # Check if the cleaning script rejected this (flat line)
+        # Check for cleaning artifacts
         if np.all(ts == ts[0]) or np.all(ts == 0):
             return None, 0
         return np.std(np.diff(ts)), 1
@@ -148,8 +141,7 @@ def add_resp_stability_features_safe(df):
     if 'resp_time_series' in df.columns:
         res = df['resp_time_series'].apply(get_stability)
         df['ts_resp_instability'] = [r[0] for r in res]
-        df['resp_ts_is_reliable'] = [r[1] for r in res] # Shared flag for Resp
-        
+        df['resp_ts_is_reliable'] = [r[1] for r in res] 
         # Fill with mean of valid rows
         df['ts_resp_instability'] = df['ts_resp_instability'].fillna(df['ts_resp_instability'].mean())
     return df
@@ -165,35 +157,35 @@ def add_stress_load_features_safe(df):
     if 'stress_time_series' in df.columns:
         res = df['stress_time_series'].apply(get_auc)
         df['ts_stress_load'] = [r[0] for r in res]
-        df['stress_ts_is_reliable'] = [r[1] for r in res] # Shared flag for Stress
+        df['stress_ts_is_reliable'] = [r[1] for r in res] 
         
         df['ts_stress_load'] = df['ts_stress_load'].fillna(df['ts_stress_load'].mean())
     return df
 
 
 def add_hr_recovery_features_safe(df):
-    """Calculates HR slope with a fallback to a neutral mean + a quality flag."""
+    """
+    Calculates HR slope with a fallback to a neutral mean
+    """
     
     def get_slope_and_quality(ts):
         ts = np.array(ts)
-        # If the series was rejected by the cleaning script (all same values/zeros)
+        # Check cleaning artifacts
         if np.all(ts == ts[0]) or np.all(ts == 0):
-            return None, 0  # Mark as NaN and Unreliable
+            return None, 0  
         
         # Calculate the actual slope
         recovery_segment = ts[-60:]
         x = np.arange(len(recovery_segment))
         slope, _ = np.polyfit(x, recovery_segment, 1)
-        return slope, 1  # Mark as Success and Reliable
+        return slope, 1 
 
     if 'hr_time_series' in df.columns:
-        # 1. Apply logic to get both values
+        
         results = df['hr_time_series'].apply(get_slope_and_quality)
         df['ts_hr_recovery_slope'] = [r[0] for r in results]
         df['ts_hr_is_reliable'] = [r[1] for r in results]
         
-        # 2. UNBIASED FILL: Fill the NaNs with the mean of the 'good' data
-        # This prevents 0.0 bias.
         slope_mean = df['ts_hr_recovery_slope'].mean()
         df['ts_hr_recovery_slope'] = df['ts_hr_recovery_slope'].fillna(slope_mean)
         
@@ -241,53 +233,47 @@ def add_coupling_features_safe(df):
 def add_engineered_features(df):
     """
     Applies the specific logic from your snippet:
-    1. Log transforms distance & sleep.
-    2. Creates the Activity Intensity Ratio.
+    Log transforms distance & sleep.
+    Creates the Activity Intensity Ratio.
     """
     
-    # 1. LOG TRANSFORM
-    # We create NEW columns prefixed with 'log_' to keep both versions
+    # LOG TRANSFORM
     for col in COLS_TO_LOG:
         if col in df.columns:
-            # np.log1p computes log(1 + x) to avoid log(0) errors
             df[f'log_{col}'] = np.log1p(df[col])
         else:
             print(f"   Warning: {col} not found, skipping log transform.")
 
-    # 2. CREATE RATIOS (Universal Metrics)
-    # Intensity: What % of total calories were active?
+    # CREATE RATIOS 
+    # Intensity: % of total calories were active
     if 'act_activeKilocalories' in df.columns and 'act_totalCalories' in df.columns:
-        # Avoid division by zero by adding 1.0
         df['act_intensity_ratio'] = df['act_activeKilocalories'] / (df['act_totalCalories'] + 1.0)
     else:
         print("   Warning: Calorie columns missing, skipping intensity ratio.")
-
-    # Note: Your snippet dropped the raw calorie columns. 
-    # I have commented this out so you don't lose data, but you can uncomment to apply it.
-    # df.drop(columns=['act_activeKilocalories', 'act_totalCalories'], inplace=True)
     
     return df
 
 def process_csvs():
+    """
+    Only adds first batch of features
+    """
+
+
     files = glob.glob(FILE_PATTERN)
     
     if not files:
         print(f"No files found matching: {FILE_PATTERN}")
         return
 
-    print(f"Found {len(files)} files. Starting feature engineering...")
+    print(f"Found {len(files)} files")
 
     for filepath in files:
         try:
-            print(f"Processing {filepath}...")
+            print(f"Processing {filepath}")
             
-            # Load with your standard settings (semicolon separator)
             df = pd.read_csv(filepath, sep=';', on_bad_lines='skip')
-            
-            # Apply the engineering
             df = add_engineered_features(df)
             
-            # Save to a new file to avoid overwriting the original
             new_filename = filepath.replace('.csv', '_with_features.csv')
             df.to_csv(new_filename, index=False, sep=';')
             

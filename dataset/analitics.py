@@ -1,10 +1,14 @@
 import pandas as pd
 import os
 
+"""
+Small script to compute mean, variance and range of the features
+
+Results are not saved but printed on terminal (possibly will change)
+"""
+
+
 FEATURES = ["act_totalCalories", "ratio_hr_rest_to_avg", "ratio_deep_sleep", "act_intensity_ratio","resp_avgTomorrowSleepRespirationValue","str_avgStressLevel","hr_lastSevenDaysAvgRestingHeartRate","sleep_remSleepSeconds", "sleep_awakeSleepSeconds"]
-
-
-# --- CONFIGURATION ---
 BASE_DIRECTORY = 'dataset'
 # Update these to the columns you want to analyze
 SELECTED_COLUMNS = FEATURES.append("label")
@@ -16,7 +20,6 @@ def analyze_nested_datasets(root_folder, columns):
 
     print(f"Scanning directory: {root_folder}\n")
 
-    # os.walk yields (current_path, subdirectories, files)
     for root, dirs, files in os.walk(root_folder):
         for file in files:
             if file.endswith('.csv'):
@@ -24,15 +27,12 @@ def analyze_nested_datasets(root_folder, columns):
                 
                 try:
                     df = pd.read_csv(file_path,sep=';')
-                    
-                    # Identify columns that exist in this specific file
                     existing_cols = [c for c in columns if c in df.columns]
                     
                     if not existing_cols:
                         continue
 
                     print(f"--- FILE: {os.path.relpath(file_path, root_folder)} ---")
-                    
                     # Compute stats
                     stats = pd.DataFrame({
                         'Mean': df[existing_cols].mean(),
