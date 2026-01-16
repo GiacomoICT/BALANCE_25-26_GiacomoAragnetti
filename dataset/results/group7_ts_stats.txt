@@ -1,0 +1,16 @@
+--- Time Series Length Report: group7 ---
+Source file: dataset\group7_combined_v2.csv
+========================================
+
+COLUMN: hr_time_series
+--------------------
+Length:   720 | Count: 138
+
+COLUMN: resp_time_series
+--------------------
+Length:   720 | Count: 138
+
+COLUMN: stress_time_series
+--------------------
+Length:   480 | Count: 138
+
