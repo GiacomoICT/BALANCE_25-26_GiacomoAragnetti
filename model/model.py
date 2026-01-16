@@ -10,12 +10,27 @@ from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from typing import Sequence
 
+
+"""
+This file contains all the function related to the Model itself.
+
+The work was done on MLP architectures with variation of hyperparameters and structure,
+as detailed on the report.
+"""
+
+
 def _sanitize_X(X):
+    """
+    Sanitization of Input
+    """
     X = np.asarray(X, dtype=np.float32)
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
     return X
 
 def _find_leaky_columns(X_tr: np.ndarray, y_tr: np.ndarray, threshold: float = 0.999) -> Sequence[int]:
+    """
+    Leaky columns spotting
+    """
     if threshold is None or threshold <= 0:
         return []
     df = pd.DataFrame(X_tr)
@@ -59,7 +74,7 @@ class Model:
         self.scaler = RobustScaler()
         self._scaler_fitted = False
 
-        # --- SIGMOID ARCHITECTURE ---
+        # MLP ARCHITECTURE 12 - 6 - 1
         self.model = Sequential([
             Dense(12, activation='leaky_relu', input_shape=(input_size,), 
                   kernel_regularizer=regularizers.l2(0.001)), 
@@ -69,8 +84,8 @@ class Model:
                   kernel_regularizer=regularizers.l2(0.001)),
             Dropout(0.2),
             
-            # Back to Sigmoid (Outputs 0.0 to 1.0)
-            Dense(1, activation='sigmoid') 
+
+            Dense(1, activation='sigmoid')   # Sigmoid Activation has outperformed linear 
         ])  
 
         self.model.compile(
@@ -90,7 +105,7 @@ class Model:
             self.fit_scaler(X)
 
     def fit(self, X_tr, y_tr, X_va, y_va, epochs=20, batch_size=32, leak_corr_threshold=0.999):
-        # 1. Sanitize and Scale Labels (CRITICAL for Sigmoid)
+        # Sanitize and scale
         X_tr = _sanitize_X(X_tr)
         X_va = _sanitize_X(X_va)
         y_tr = np.asarray(y_tr, dtype=np.float32).reshape(-1, 1) / 100.0
@@ -100,18 +115,18 @@ class Model:
             X_combined = np.vstack([X_tr, X_va])
             self.fit_scaler(X_combined)
 
-        # 2. Leak Guard
+        # Leak Guard
         drop_cols = _find_leaky_columns(X_tr, y_tr, threshold=leak_corr_threshold)
         if drop_cols:
             keep_mask = np.ones(X_tr.shape[1], dtype=bool)
             keep_mask[np.array(drop_cols, dtype=int)] = False
             X_tr, X_va = X_tr[:, keep_mask], X_va[:, keep_mask]
 
-        # 3. Feature Scaling
+        # Feature Scaling
         X_tr_scaled = self.scaler.transform(X_tr).astype(np.float32)
         X_va_scaled = self.scaler.transform(X_va).astype(np.float32)
 
-        # 4. Training Callbacks
+        # Training Callbacks
         early_stop = EarlyStopping(monitor="val_loss", patience=8, restore_best_weights=True)
         #reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=4, min_lr=0.0001)
         
