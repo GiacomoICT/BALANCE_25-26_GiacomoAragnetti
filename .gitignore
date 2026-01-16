@@ -7,6 +7,11 @@ __pycache__/
 
 #logs
 logs/
+results/
 
 #saved models
 checkpoints/
+
+#dataset
+group*_combined.csv
+
