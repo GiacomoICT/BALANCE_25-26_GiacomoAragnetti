@@ -232,7 +232,6 @@ def add_coupling_features_safe(df):
 
 def add_engineered_features(df):
     """
-    Applies the specific logic from your snippet:
     Log transforms distance & sleep.
     Creates the Activity Intensity Ratio.
     """

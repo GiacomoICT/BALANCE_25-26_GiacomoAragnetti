@@ -23,7 +23,6 @@ class SaveModelStrategy(FedProx):
 
         if aggregated_parameters is not None:
             weights = fl.common.parameters_to_ndarrays(aggregated_parameters)
-            # Save by round number so you can track progress or revert if needed
             file_path = os.path.join(MODEL_DIR, f"global_model_round_{server_round}.npz")
             np.savez(file_path, *weights)
             print(f"[Server] Saved global model for round {server_round} to {file_path}")
@@ -32,7 +31,6 @@ class SaveModelStrategy(FedProx):
 
     def aggregate_evaluate(self, server_round, results, failures):
         """Aggregates regression metrics (MAE and Accuracy Threshold)."""
-        # Call base to get the aggregated loss (which is Huber in our Model)
         aggregated_loss, _ = super().aggregate_evaluate(server_round, results, failures)
 
         if not results:
@@ -46,12 +44,12 @@ class SaveModelStrategy(FedProx):
             n = eval_res.num_examples
             total_examples += n
 
-            # 1. Aggregate MAE (Mean Absolute Error)
+            # Aggregate MAE (Mean Absolute Error)
             mae = eval_res.metrics.get("mae")
             if mae is not None:
                 weighted_mae_sum += mae * n
 
-            # 2. Aggregate Accuracy (Within +/- 5 points)
+            # Aggregate Accuracy (Within +/- 5 points)
             acc = eval_res.metrics.get("accuracy")
             if acc is not None:
                 weighted_acc_sum += acc * n

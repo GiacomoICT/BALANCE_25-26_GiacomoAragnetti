@@ -36,7 +36,7 @@ class FlwClient(fl.client.NumPyClient):
             self.csv_path,
             label_column="label",
             keep_features=FEATURES,
-            drop_features=["hr_time_series", "resp_time_series", "resp_time_series"],
+            drop_features=["hr_time_series", "resp_time_series", "stress_time_series"],
             test_size=0.2,
             val_size=0.1
         )

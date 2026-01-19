@@ -9,6 +9,14 @@ INPUT_PATTERN = 'dataset/group*_combined.csv'
 OUTPUT_DIR = 'dataset/results'
 TS_COLUMNS = ['hr_time_series', 'resp_time_series', 'stress_time_series']
 
+
+"""
+Small script to analyze the time series of each group, to see how long they were 
+and get an idea of what was what.
+
+Results per group are saved in results/
+"""
+
 def get_list_length(val):
     if pd.isna(val) or str(val).strip() in ["", "[]"]:
         return 0

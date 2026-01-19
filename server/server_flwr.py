@@ -12,8 +12,6 @@ When executed as a script, the parent repository root is added to
 import os
 import sys
 
-# If running the script directly, ensure the repository root is on sys.path
-# so `import server.config` resolves correctly.
 if __package__ is None:
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     if repo_root not in sys.path:

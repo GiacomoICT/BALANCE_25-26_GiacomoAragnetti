@@ -8,7 +8,7 @@ def run_script(script_path):
     print(f"Starting: {script_path}")
     print(f"{'='*40}")
     
-    # Convert string path to a Path object for safety
+
     path = Path(script_path)
     
     if not path.exists():
@@ -16,8 +16,6 @@ def run_script(script_path):
         return False
 
     try:
-        # Run the script using the same python interpreter currently being used
-        # check=True will raise an error if the script fails (crashes)
         subprocess.run([sys.executable, str(path)], check=True)
         print(f"\nFinished successfully: {script_path}")
         return True
@@ -26,10 +24,10 @@ def run_script(script_path):
         return False
 
 if __name__ == "__main__":
-    # 1. Run the summation script
+
     step1_success = run_script("CSV_train/sum.py")
     
-    # 2. Run the feature engineering script ONLY if step 1 succeeded
+    # Run the feature engineering script ONLY if step 1 succeeded
     if step1_success:
         run_script("dataset/adding_features.py")
     else:

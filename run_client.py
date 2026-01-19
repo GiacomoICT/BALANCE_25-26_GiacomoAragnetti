@@ -1,15 +1,7 @@
 """Run multiple Flower clients from a single script using the unified client.
 
 This runner starts multiple instances of the single `client_flwr.py` placed at
-the repo root. Datasets are expected in `dataset/` as `dataset_G.csv`,
-`dataset_I.csv`, `dataset_L.csv`, `dataset_S.csv`.
-
-Usage:
-    python3 server_flwr.py
-    python3 run_clients.py --server_address localhost:8080
-
-Options:
-    --clients  Optional comma-separated list (default: G,I,L,S)
+the repo root. Datasets are expected in `dataset/` 
 """
 
 import argparse
@@ -18,7 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Try to pick default server address from server config if available
+
 try:
     from server.config import SERVER_ADDRESS as DEFAULT_SERVER_ADDRESS
 except Exception:
@@ -40,7 +32,7 @@ def start_clients(server_address: str, clients: list[str]):
     logs_dir.mkdir(exist_ok=True)
 
     for cid in clients:
-        dataset_path = BASE_DIR / "dataset" / f"group{cid}_combined_with_features_v2.csv"
+        dataset_path = BASE_DIR / "dataset" / f"group{cid}_combined.csv"
         print(f"file found for Id_{cid}")
         if not dataset_path.exists():
             print(f"Warning: dataset not found for client {cid}. Skipping.")
@@ -58,7 +50,6 @@ def start_clients(server_address: str, clients: list[str]):
         client_workdir.mkdir(parents=True, exist_ok=True)
 
         f = open(logfile, "w")
-        # Added 'env=env' to fix potential import errors
         proc = subprocess.Popen(
             cmd, 
             stdout=f, 

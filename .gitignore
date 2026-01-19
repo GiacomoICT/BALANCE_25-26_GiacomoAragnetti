@@ -15,3 +15,21 @@ checkpoints/
 #dataset
 group*_combined.csv
 
+# Ignore all PNG files
+*.png
+
+# Ignore all JPG and JPEG files
+*.jpg
+*.jpe
+
+# Ignore images in the folder
+presentation/images/
+
+# Ignore non-pdf presentation
+*.pptx
+
+# Papers
+related_lit/
+
+# Plots for presentation
+Other/plot_metrics.py
