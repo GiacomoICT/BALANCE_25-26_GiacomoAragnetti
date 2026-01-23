@@ -1,0 +1,15 @@
+Research (Hannah G. Lund) shows that 60% of Students enrolled in higher education can be categorized as poor-quality sleepers. This means that 3 out of 5 students 
+in this room. Can someone identify who they are? Even thought you would be statistically advantaged, I can guarantee that, at least from this point of view, it would be impossible 
+to discern. This is because sleep quality doesn't scream, but rather is a quiet weight on that silently affects everything we do. 
+Now, one might try to look closely for clues: maybe rings, or bloodshot eyes. We can look for patterns, we can look for small, silent data that tells us more than what appears.
+As an engineer, the quietest data I know of are numbers, and the most fitting patterns are the one found by a brain, although digital in this case.
+
+My name is Giacomo Aragnetti, and I'm grateful to be here today to present how we got numbers to tell more about our sleep than our mattresses can. (1:20)
+
+Our approach is firstly based on finding those elements that can be measured throughout the day which influence our sleep. To do so, we extract from the data provided by the 
+Garmin Vivoactive 5 some derived information such as ratios between active and passive kiloacalories, or comparisons between values in different period of the day. We then use 
+a simpler AI, specifically random forests, to discern which ones are more effective, meaning that they have stronger influence on the sleep quality.
+Our results highlights that the 
+
+
+

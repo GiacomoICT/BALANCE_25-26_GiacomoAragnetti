@@ -33,3 +33,5 @@ related_lit/
 
 # Plots for presentation
 Other/plot_metrics.py
+
+CSV_train/
